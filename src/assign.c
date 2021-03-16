@@ -503,7 +503,10 @@ SEXP assign(SEXP dt, SEXP rows, SEXP cols, SEXP newcolnames, SEXP values)
       continue;
     }
 
-    if (coln+1 > oldncol) {  // new column
+    // Eliminate 'in-place' optimization: it can clash with setDT reference semantics 
+    // and messes up origin data.frame data:   bug #4783
+    // if (coln+1 > oldncol) {  // new column
+    // 
       SET_VECTOR_ELT(dt, coln, targetcol=allocNAVectorLike(thisvalue, nrow));
       // initialize with NAs for when 'rows' is a subset and it doesn't touch
       // do not try to save the time to NA fill (contiguous branch free assign anyway) since being
@@ -511,9 +514,11 @@ SEXP assign(SEXP dt, SEXP rows, SEXP cols, SEXP newcolnames, SEXP values)
       if (isVectorAtomic(thisvalue)) copyMostAttrib(thisvalue,targetcol);  // class etc but not names
       // else for lists (such as data.frame and data.table) treat them as raw lists and drop attribs
       if (vlen<1) continue;   // e.g. DT[,newcol:=integer()] (adding new empty column)
-    } else {                 // existing column
-      targetcol = VECTOR_ELT(dt,coln);
-    }
+      
+    //} else {                 // existing column
+    //  targetcol = VECTOR_ELT(dt,coln);
+    //}
+
     const char *ret = memrecycle(targetcol, rows, 0, targetlen, thisvalue, 0, -1, coln+1, CHAR(STRING_ELT(names, coln)));
     if (ret) warning(ret);
   }
